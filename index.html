@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+    <title>Market Expansion Intelligence</title>
+</head>
+<body>
+    <h1>Market Expansion Intelligence</h1>
+    <input id="keyword" type="text" placeholder="Enter a product name..." />
+    <button onclick="analyze()">Analyze</button>
+    <p id="status"></p>
+    <div id="map"></div>
+
+<script>
+async function analyze() {
+    document.getElementById('status').innerText = 'Analyzing...';
+
+    const keyword = document.getElementById('keyword').value;
+    const response = await fetch('http://127.0.0.1:5000/api/trends?keyword=' + keyword);
+    const data = await response.json();
+    document.getElementById('status').innerText = 'Done :) ';
+    drawMap(data[keyword]);
+}
+
+async function drawMap(scores) {
+    document.getElementById('map').innerHTML = '';
+    const world = await d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+    const countries = topojson.feature(world, world.objects.countries);
+
+    const color = d3.scaleSequential(d3.interpolateBlues).domain([0, 100]);
+
+    const svg = d3.select('#map').append('svg')
+        .attr('width', 960).attr('height', 500);
+
+    const projection = d3.geoNaturalEarth1().scale(153).translate([480, 250]);
+    const path = d3.geoPath().projection(projection);
+
+    svg.selectAll('path')
+        .data(countries.features)
+        .join('path')
+        .attr('d', path)
+        .attr('fill', d => {
+            const name = d.properties.name;
+            return scores[name] ? color(scores[name]) : '#eee';
+        })
+        .attr('stroke', '#fff')
+        .attr('stroke-width', 0.5);
+}
+</script>
+</body>
+</html>
+
+
+
